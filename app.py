@@ -35,9 +35,20 @@ if "username" not in st.session_state:
 
 def get_students_dataframe():
     """Fetches all students as a Pandas DataFrame."""
-    rows = get_all_students()
-    columns = ["id", "name", "roll_no", "subject1", "subject2", "subject3",
-               "total", "percentage", "grade", "result"]
+    rows = get_all_students(st.session_state.username)
+    columns = [
+    "id",
+    "username",
+    "name",
+    "roll_no",
+    "subject1",
+    "subject2",
+    "subject3",
+    "total",
+    "percentage",
+    "grade",
+    "result"
+]
     return pd.DataFrame(rows, columns=columns)
 
 
@@ -132,7 +143,8 @@ def page_home():
     if df.empty:
         st.info("No students added yet.")
     else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        display_df = df.drop(columns=["username"])
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 
 def page_add():
@@ -153,7 +165,18 @@ def page_add():
                 st.error("Name and Roll No are required.")
             else:
                 total, percentage, grade, result = calculate_result(subject1, subject2, subject3)
-                add_student(name, roll_no, subject1, subject2, subject3, total, percentage, grade, result)
+                add_student(
+    st.session_state.username,
+    name,
+    roll_no,
+    subject1,
+    subject2,
+    subject3,
+    total,
+    percentage,
+    grade,
+    result
+)
                 st.success(f"Student '{name}' added successfully! Grade: {grade}, Result: {result}")
 
 
@@ -161,37 +184,68 @@ def page_manage():
     st.title("Manage Students")
 
     keyword = st.text_input("🔍 Search by name or roll no")
-    students = search_student(keyword) if keyword else get_all_students()
+    students = (
+    search_student(st.session_state.username, keyword)
+    if keyword
+    else get_all_students(st.session_state.username)
+)
 
     if not students:
         st.info("No students found.")
         return
 
     # Build a dropdown of "Name (Roll No)" so the user can pick a student to edit/delete
-    options = {f"{s[1]} (Roll No: {s[2]})": s for s in students}
-    df = pd.DataFrame(students, columns=["id", "name", "roll_no", "subject1", "subject2",
-                                          "subject3", "total", "percentage", "grade", "result"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    options = {f"{s[2]} (Roll No: {s[3]})": s for s in students}
+    df = pd.DataFrame(
+    students,
+    columns=[
+        "id",
+        "username",
+        "name",
+        "roll_no",
+        "subject1",
+        "subject2",
+        "subject3",
+        "total",
+        "percentage",
+        "grade",
+        "result",
+    ],
+)
+    display_df = df.drop(columns=["username"])
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     st.subheader("Edit or Delete a Student")
     selected_label = st.selectbox("Select a student", list(options.keys()))
     selected = options[selected_label]  # the full row tuple
 
+
     with st.form("edit_student_form"):
-        name = st.text_input("Name", value=selected[1])
-        roll_no = st.text_input("Roll No", value=selected[2])
+
+        name = st.text_input("Name", value=selected[2])
+        roll_no = st.text_input("Roll No", value=selected[3])
+
         col1, col2, col3 = st.columns(3)
-        subject1 = col1.number_input("Subject 1 Marks", min_value=0, max_value=100, value=int(selected[3]))
-        subject2 = col2.number_input("Subject 2 Marks", min_value=0, max_value=100, value=int(selected[4]))
-        subject3 = col3.number_input("Subject 3 Marks", min_value=0, max_value=100, value=int(selected[5]))
+
+        subject1 = col1.number_input("Subject 1 Marks", min_value=0, max_value=100, value=int(selected[4]))
+        subject2 = col2.number_input("Subject 2 Marks", min_value=0, max_value=100, value=int(selected[5]))
+        subject3 = col3.number_input("Subject 3 Marks", min_value=0, max_value=100, value=int(selected[6]))
 
         col_a, col_b = st.columns(2)
-        update_clicked = col_a.form_submit_button("Update Student", type="primary")
-        delete_clicked = col_b.form_submit_button("Delete Student")
+
+        with col_a:
+            update_clicked = st.form_submit_button("Update Student", type="primary")
+
+        with col_b:
+            delete_clicked = st.form_submit_button("Delete Student")
 
         if update_clicked:
             total, percentage, grade, result = calculate_result(subject1, subject2, subject3)
-            update_student(selected[0], name, roll_no, subject1, subject2, subject3, total, percentage, grade, result)
+            update_student(
+                selected[0], name, roll_no,
+                subject1, subject2, subject3,
+                total, percentage, grade, result
+            )
             st.success("Student updated successfully!")
             st.rerun()
 
@@ -199,7 +253,6 @@ def page_manage():
             delete_student(selected[0])
             st.success("Student deleted successfully!")
             st.rerun()
-
 
 def page_analytics():
     st.title("Analytics")
