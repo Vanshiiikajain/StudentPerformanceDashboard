@@ -39,17 +39,18 @@ def create_tables():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            roll_no TEXT NOT NULL,
-            subject1 REAL NOT NULL,
-            subject2 REAL NOT NULL,
-            subject3 REAL NOT NULL,
-            total REAL NOT NULL,
-            percentage REAL NOT NULL,
-            grade TEXT NOT NULL,
-            result TEXT NOT NULL
-        )
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL,
+    name TEXT NOT NULL,
+    roll_no TEXT NOT NULL,
+    subject1 REAL NOT NULL,
+    subject2 REAL NOT NULL,
+    subject3 REAL NOT NULL,
+    total REAL NOT NULL,
+    percentage REAL NOT NULL,
+    grade TEXT NOT NULL,
+    result TEXT NOT NULL
+)
     """)
 
     conn.commit()
@@ -104,22 +105,37 @@ def verify_user(username, password):
 # STUDENT FUNCTIONS (same as before)
 # ---------------------------------------------------------
 
-def add_student(name, roll_no, subject1, subject2, subject3, total, percentage, grade, result):
+def add_student(username, name, roll_no, subject1, subject2, subject3,
+                total, percentage, grade, result):
+
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("""
-        INSERT INTO students (name, roll_no, subject1, subject2, subject3, total, percentage, grade, result)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (name, roll_no, subject1, subject2, subject3, total, percentage, grade, result))
+        INSERT INTO students
+        (username,name,roll_no,subject1,subject2,subject3,total,percentage,grade,result)
+
+        VALUES(?,?,?,?,?,?,?,?,?,?)
+    """,(username,name,roll_no,subject1,subject2,
+         subject3,total,percentage,grade,result))
+
     conn.commit()
     conn.close()
+  
 
 
-def get_all_students():
+def get_all_students(username):
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM students")
+
+    cursor.execute(
+        "SELECT * FROM students WHERE username=?",
+        (username,)
+    )
+
     rows = cursor.fetchall()
+
     conn.close()
     return rows
 
@@ -144,14 +160,24 @@ def delete_student(student_id):
     conn.commit()
     conn.close()
 
+def search_student(username, keyword):
 
-def search_student(keyword):
     conn = get_connection()
     cursor = conn.cursor()
+
     cursor.execute("""
-        SELECT * FROM students
-        WHERE name LIKE ? OR roll_no LIKE ?
-    """, (f"%{keyword}%", f"%{keyword}%"))
+        SELECT *
+        FROM students
+        WHERE username=?
+        AND (name LIKE ? OR roll_no LIKE ?)
+    """,
+    (
+        username,
+        f"%{keyword}%",
+        f"%{keyword}%"
+    ))
+
     rows = cursor.fetchall()
+
     conn.close()
     return rows
